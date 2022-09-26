@@ -295,17 +295,3 @@ impl Sha2 for Wrapping<u64> {
         Self(0x6c44198c4a475817),
     ];
 }
-
-#[cfg(any(target_arch = "aarch64", target_arch = "arm", target_arch = "x86_64"))]
-extern "C" {
-    pub(super) fn GFp_sha256_block_data_order(
-        state: &mut super::State,
-        data: *const u8,
-        num: c::size_t,
-    );
-    pub(super) fn GFp_sha512_block_data_order(
-        state: &mut super::State,
-        data: *const u8,
-        num: c::size_t,
-    );
-}
