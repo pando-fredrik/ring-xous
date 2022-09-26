@@ -1242,12 +1242,6 @@ fn limbs_from_mont_in_place(r: &mut [Limb], tmp: &mut [Limb], m: &[Limb], n0: &N
     .unwrap()
 }
 
-#[cfg(not(any(
-    target_arch = "aarch64",
-    target_arch = "arm",
-    target_arch = "x86_64",
-    target_arch = "x86"
-)))]
 fn limbs_mul(r: &mut [Limb], a: &[Limb], b: &[Limb]) {
     debug_assert_eq!(r.len(), 2 * a.len());
     debug_assert_eq!(a.len(), b.len());
@@ -1273,29 +1267,6 @@ fn limbs_mont_product(r: &mut [Limb], a: &[Limb], b: &[Limb], m: &[Limb], n0: &N
     debug_assert_eq!(a.len(), m.len());
     debug_assert_eq!(b.len(), m.len());
 
-    #[cfg(any(
-        target_arch = "aarch64",
-        target_arch = "arm",
-        target_arch = "x86_64",
-        target_arch = "x86"
-    ))]
-    unsafe {
-        GFp_bn_mul_mont(
-            r.as_mut_ptr(),
-            a.as_ptr(),
-            b.as_ptr(),
-            m.as_ptr(),
-            n0,
-            r.len(),
-        )
-    }
-
-    #[cfg(not(any(
-        target_arch = "aarch64",
-        target_arch = "arm",
-        target_arch = "x86_64",
-        target_arch = "x86"
-    )))]
     {
         let mut tmp = [0; 2 * MODULUS_MAX_LIMBS];
         let tmp = &mut tmp[..(2 * a.len())];
@@ -1307,29 +1278,6 @@ fn limbs_mont_product(r: &mut [Limb], a: &[Limb], b: &[Limb], m: &[Limb], n0: &N
 /// r = r**2
 fn limbs_mont_square(r: &mut [Limb], m: &[Limb], n0: &N0) {
     debug_assert_eq!(r.len(), m.len());
-    #[cfg(any(
-        target_arch = "aarch64",
-        target_arch = "arm",
-        target_arch = "x86_64",
-        target_arch = "x86"
-    ))]
-    unsafe {
-        GFp_bn_mul_mont(
-            r.as_mut_ptr(),
-            r.as_ptr(),
-            r.as_ptr(),
-            m.as_ptr(),
-            n0,
-            r.len(),
-        )
-    }
-
-    #[cfg(not(any(
-        target_arch = "aarch64",
-        target_arch = "arm",
-        target_arch = "x86_64",
-        target_arch = "x86"
-    )))]
     {
         let mut tmp = [0; 2 * MODULUS_MAX_LIMBS];
         let tmp = &mut tmp[..(2 * r.len())];
