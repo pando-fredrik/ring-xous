@@ -25,6 +25,7 @@ use crate::bits;
 
 #[cfg(feature = "alloc")]
 use core::num::Wrapping;
+use crate::c2rust::limbs::LIMBS_add_mod;
 
 // XXX: Not correct for x32 ABIs.
 #[cfg(target_pointer_width = "64")]
@@ -331,7 +332,6 @@ pub fn fold_5_bit_windows<R, I: FnOnce(Window) -> R, F: Fn(R, Window) -> R>(
         })
 }
 
-#[cfg(target_os="xous")]
 #[inline]
 pub(crate) fn limbs_add_assign_mod(a: &mut [Limb], b: &[Limb], m: &[Limb]) {
     debug_assert_eq!(a.len(), m.len());
