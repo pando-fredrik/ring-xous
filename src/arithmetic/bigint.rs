@@ -1362,32 +1362,6 @@ fn limbs_mont_square(r: &mut [Limb], m: &[Limb], n0: &N0) {
 }
 
 extern "C" {
-    #[cfg(any(
-        target_arch = "aarch64",
-        target_arch = "arm",
-        target_arch = "x86_64",
-        target_arch = "x86"
-    ))]
-    // `r` and/or 'a' and/or 'b' may alias.
-    fn GFp_bn_mul_mont(
-        r: *mut Limb,
-        a: *const Limb,
-        b: *const Limb,
-        n: *const Limb,
-        n0: &N0,
-        num_limbs: c::size_t,
-    );
-
-    // `r` must not alias `a`
-    #[cfg(any(
-        test,
-        not(any(
-            target_arch = "aarch64",
-            target_arch = "arm",
-            target_arch = "x86_64",
-            target_arch = "x86"
-        ))
-    ))]
     #[must_use]
     fn GFp_limbs_mul_add_limb(r: *mut Limb, a: *const Limb, b: Limb, num_limbs: c::size_t) -> Limb;
 }
