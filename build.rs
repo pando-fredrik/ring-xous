@@ -334,6 +334,7 @@ fn build_c_code(target: &Target, pregenerated: PathBuf, out_dir: &Path) {
             return;
         }
     }
+    return;
     // Xous uses a pure Rust transpiled version of the code base
     if &target.os == "xous" && &target.arch != "x86_64" {
         return;
