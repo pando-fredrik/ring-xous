@@ -81,7 +81,6 @@ extern crate alloc;
 #[macro_use]
 mod debug;
 
-#[cfg(target_os="xous")]
 #[macro_use]
 mod prefixed;
 
