@@ -358,13 +358,14 @@ fn build_c_code(target: &Target, pregenerated: PathBuf, out_dir: &Path) {
         }
     }
 
-    let (_, _, perlasm_format) = ASM_TARGETS
-        .iter()
+    let (_, _, perlasm_format) = match ASM_TARGETS.iter()
         .find(|entry| {
             let &(entry_arch, entry_os, _) = *entry;
             entry_arch == target.arch && is_none_or_equals(entry_os, &target.os)
-        })
-        .unwrap();
+        }) {
+            Some(entry) => (String::from(entry.0), entry.1, entry.2),
+            None => ("".to_string(), None, None)
+        };
 
     let use_pregenerated = !target.is_git;
     let warnings_are_errors = target.is_git;
