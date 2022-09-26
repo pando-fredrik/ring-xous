@@ -175,38 +175,6 @@ impl Key {
         }
     }
 
-    #[inline] // Optimize away match on `counter.`
-    #[cfg(not(target_arch="riscv32imac"))]
-    unsafe fn encrypt(
-        &self,
-        counter: CounterOrIv,
-        input: *const u8,
-        in_out_len: usize,
-        output: *mut u8,
-    ) {
-        let iv = match counter {
-            CounterOrIv::Counter(counter) => counter.into(),
-            CounterOrIv::Iv(iv) => {
-                assert!(in_out_len <= 32);
-                iv
-            }
-        };
-
-        // XXX: Although this takes an `Iv`, this actually uses it like a
-        // `Counter`.
-        extern "C" {
-            fn GFp_ChaCha20_ctr32(
-                out: *mut u8,
-                in_: *const u8,
-                in_len: crate::c::size_t,
-                key: &Key,
-                first_iv: &Iv,
-            );
-        }
-
-        GFp_ChaCha20_ctr32(output, input, in_out_len, self, &iv);
-    }
-
     /// This is "less safe" because it skips the important check that `encrypt_within` does.
     /// It assumes `src` equals `0..`, which is checked and corrected by `encrypt_within`.
     #[inline] // Optimize away match on `counter.`
