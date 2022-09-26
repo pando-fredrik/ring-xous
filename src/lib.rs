@@ -109,12 +109,12 @@ pub mod io;
 
 mod cpu;
 pub mod digest;
-#[cfg(all(target_os="xous",not(target_arch="x86_64")))]
+//#[cfg(all(target_os="xous",not(target_arch="x86_64")))]
 pub mod ec_17;
-#[cfg(all(target_os="xous",not(target_arch="x86_64")))]
+//#[cfg(all(target_os="xous",not(target_arch="x86_64")))]
 pub use ec_17 as ec;
 #[cfg(not(all(target_os="xous",not(target_arch="x86_64"))))]
-mod ec;
+//mod ec;
 mod endian;
 pub mod error;
 pub mod hkdf;
@@ -145,7 +145,7 @@ mod sealed {
     pub trait Sealed {}
 }
 
-#[cfg(target_os="xous")]
+//#[cfg(target_os="xous")]
 mod c2rust {
     pub mod aes_nohw;
     pub mod montgomery;
@@ -162,16 +162,16 @@ mod c2rust {
     mod p256;
 }
 
-#[cfg(target_os="xous")]
+//#[cfg(target_os="xous")]
 mod xous_rand;
 #[cfg(target_os="xous")]
 pub mod xous_test;
 
-#[cfg(target_os="xous")]
+//#[cfg(target_os="xous")]
 type c_char = i8;
-#[cfg(target_os="xous")]
+//#[cfg(target_os="xous")]
 type c_uint = u32;
-#[cfg(target_os="xous")]
+//#[cfg(target_os="xous")]
 #[export_name = "__assert_fail"]
 pub unsafe extern "C" fn __assert_fail(
     __assertion: *const c_char,

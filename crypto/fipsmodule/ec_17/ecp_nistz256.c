@@ -347,7 +347,6 @@ void GFp_nistz256_point_mul_base(P256_POINT *r,
 #endif
 #endif
 
-#if defined(__xous__)
 #include "p256_32.h"
 
 #define FIAT_P256_NLIMBS 8
@@ -602,4 +601,3 @@ void GFp_nistz256_point_double(P256_POINT *r, const P256_POINT *a) {
 void GFp_nistz256_neg(Limb res[P256_LIMBS], const Limb a[P256_LIMBS]) {
   fiat_p256_opp(res, a);
 }
-#endif
