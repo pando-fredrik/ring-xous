@@ -17,7 +17,6 @@ use core::{
     num::Wrapping,
     ops::{Add, AddAssign, BitAnd, BitOr, BitXor, Not, Shr},
 };
-use crate::digest::sha1::block_data_order;
 
 pub(super) extern "C" fn GFp_sha256_block_data_order(
     state: &mut super::State,
@@ -26,6 +25,85 @@ pub(super) extern "C" fn GFp_sha256_block_data_order(
 ) {
     let state = unsafe { &mut state.as32 };
     *state = block_data_order(*state, data, num)
+}
+
+pub(super) extern "C" fn GFp_sha512_block_data_order(
+    state: &mut super::State,
+    data: *const u8,
+    num: c::size_t,
+) {
+    let state = unsafe { &mut state.as64 };
+    *state = block_data_order(*state, data, num)
+}
+
+#[cfg_attr(
+    any(target_arch = "aarch64", target_arch = "arm", target_arch = "x86_64"),
+    allow(dead_code)
+)]
+#[inline]
+fn block_data_order<S: Sha2>(
+    mut H: [S; CHAINING_WORDS],
+    M: *const u8,
+    num: c::size_t,
+) -> [S; CHAINING_WORDS] {
+    let M = M as *const [S::InputBytes; 16];
+    let M: &[[S::InputBytes; 16]] = unsafe { core::slice::from_raw_parts(M, num) };
+
+    for M in M {
+        // FIPS 180-4 {6.2.2, 6.4.2} Step 1
+        //
+        // TODO: Use `let W: [S::ZERO; S::ROUNDS]` instead of allocating
+        // `MAX_ROUNDS` items and then slicing to `K.len()`; depends on
+        // https://github.com/rust-lang/rust/issues/43408.
+        let mut W = [S::ZERO; MAX_ROUNDS];
+        let W: &[S] = {
+            let W = &mut W[..S::K.len()];
+            for (W, M) in W.iter_mut().zip(M) {
+                *W = S::from_be_bytes(*M);
+            }
+            for t in M.len()..S::K.len() {
+                W[t] = sigma_1(W[t - 2]) + W[t - 7] + sigma_0(W[t - 15]) + W[t - 16]
+            }
+
+            W
+        };
+
+        // FIPS 180-4 {6.2.2, 6.4.2} Step 2
+        let mut a = H[0];
+        let mut b = H[1];
+        let mut c = H[2];
+        let mut d = H[3];
+        let mut e = H[4];
+        let mut f = H[5];
+        let mut g = H[6];
+        let mut h = H[7];
+
+        // FIPS 180-4 {6.2.2, 6.4.2} Step 3
+        for (Kt, Wt) in S::K.iter().zip(W.iter()) {
+            let T1 = h + SIGMA_1(e) + ch(e, f, g) + *Kt + *Wt;
+            let T2 = SIGMA_0(a) + maj(a, b, c);
+            h = g;
+            g = f;
+            f = e;
+            e = d + T1;
+            d = c;
+            c = b;
+            b = a;
+            a = T1 + T2;
+        }
+
+        // FIPS 180-4 {6.2.2, 6.4.2} Step 4
+        H[0] += a;
+        H[1] += b;
+        H[2] += c;
+        H[3] += d;
+        H[4] += e;
+        H[5] += f;
+        H[6] += g;
+        H[7] += h;
+    }
+
+    H
 }
 
 // FIPS 180-4 {4.1.1, 4.1.2, 4.1.3}
