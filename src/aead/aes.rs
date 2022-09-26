@@ -212,75 +212,6 @@ impl Key {
         assert_eq!(in_out_len % BLOCK_LEN, 0);
 
         match detect_implementation(self.cpu_features) {
-            #[cfg(any(
-                target_arch = "aarch64",
-                target_arch = "arm",
-                target_arch = "x86_64",
-                target_arch = "x86"
-            ))]
-            Implementation::HWAES => ctr32_encrypt_blocks!(
-                GFp_aes_hw_ctr32_encrypt_blocks,
-                in_out,
-                in_prefix_len,
-                &self.inner,
-                ctr
-            ),
-
-            #[cfg(any(target_arch = "aarch64", target_arch = "arm", target_arch = "x86_64"))]
-            Implementation::VPAES_BSAES => {
-                // 8 blocks is the cut-off point where it's faster to use BSAES.
-                #[cfg(target_arch = "arm")]
-                let in_out = if in_out_len >= 8 * BLOCK_LEN {
-                    let remainder = in_out_len % (8 * BLOCK_LEN);
-                    let bsaes_in_out_len = if remainder < (4 * BLOCK_LEN) {
-                        in_out_len - remainder
-                    } else {
-                        in_out_len
-                    };
-
-                    let mut bsaes_key = AES_KEY {
-                        rd_key: [0u32; 4 * (MAX_ROUNDS + 1)],
-                        rounds: 0,
-                    };
-                    extern "C" {
-                        fn GFp_vpaes_encrypt_key_to_bsaes(
-                            bsaes_key: &mut AES_KEY,
-                            vpaes_key: &AES_KEY,
-                        );
-                    }
-                    unsafe {
-                        GFp_vpaes_encrypt_key_to_bsaes(&mut bsaes_key, &self.inner);
-                    }
-                    ctr32_encrypt_blocks!(
-                        GFp_bsaes_ctr32_encrypt_blocks,
-                        &mut in_out[..(bsaes_in_out_len + in_prefix_len)],
-                        in_prefix_len,
-                        &bsaes_key,
-                        ctr
-                    );
-
-                    &mut in_out[bsaes_in_out_len..]
-                } else {
-                    in_out
-                };
-
-                ctr32_encrypt_blocks!(
-                    GFp_vpaes_ctr32_encrypt_blocks,
-                    in_out,
-                    in_prefix_len,
-                    &self.inner,
-                    ctr
-                )
-            }
-
-            #[cfg(any(target_arch = "x86"))]
-            Implementation::VPAES_BSAES => {
-                super::shift::shift_full_blocks(in_out, in_prefix_len, |input| {
-                    self.encrypt_iv_xor_block(ctr.increment(), Block::from(input))
-                });
-            }
-
-            #[cfg(not(target_arch = "aarch64"))]
             Implementation::NOHW => ctr32_encrypt_blocks!(
                 GFp_aes_nohw_ctr32_encrypt_blocks,
                 in_out,
@@ -340,72 +271,14 @@ pub type Counter = counter::Counter<BigEndian<u32>>;
 #[repr(C)] // Only so `Key` can be `#[repr(C)]`
 #[derive(Clone, Copy)]
 pub enum Implementation {
-    #[cfg(any(
-        target_arch = "aarch64",
-        target_arch = "arm",
-        target_arch = "x86_64",
-        target_arch = "x86"
-    ))]
-    HWAES = 1,
-
-    // On "arm" only, this indicates that the bsaes implementation may be used.
-    #[cfg(any(
-        target_arch = "aarch64",
-        target_arch = "arm",
-        target_arch = "x86_64",
-        target_arch = "x86"
-    ))]
-    VPAES_BSAES = 2,
-
-    #[cfg(not(target_arch = "aarch64"))]
     NOHW = 3,
 }
 
 fn detect_implementation(cpu_features: cpu::Features) -> Implementation {
     // `cpu_features` is only used for specific platforms.
-    #[cfg(not(any(
-        target_arch = "aarch64",
-        target_arch = "arm",
-        target_arch = "x86_64",
-        target_arch = "x86"
-    )))]
+
     let _cpu_features = cpu_features;
-
-    #[cfg(any(
-        target_arch = "aarch64",
-        target_arch = "arm",
-        target_arch = "x86_64",
-        target_arch = "x86"
-    ))]
-    {
-        if cpu::intel::AES.available(cpu_features) || cpu::arm::AES.available(cpu_features) {
-            return Implementation::HWAES;
-        }
-    }
-
-    #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
-    {
-        if cpu::intel::SSSE3.available(cpu_features) {
-            return Implementation::VPAES_BSAES;
-        }
-    }
-
-    #[cfg(target_arch = "arm")]
-    {
-        if cpu::arm::NEON.available(cpu_features) {
-            return Implementation::VPAES_BSAES;
-        }
-    }
-
-    #[cfg(target_arch = "aarch64")]
-    {
-        Implementation::VPAES_BSAES
-    }
-
-    #[cfg(not(target_arch = "aarch64"))]
-    {
-        Implementation::NOHW
-    }
+    Implementation::NOHW
 }
 
 #[cfg(test)]
