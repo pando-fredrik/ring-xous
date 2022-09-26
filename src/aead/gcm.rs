@@ -30,42 +30,6 @@ impl Key {
         let h_table = &mut key.0;
 
         match detect_implementation(cpu_features) {
-            #[cfg(target_arch = "x86_64")]
-            Implementation::CLMUL if has_avx_movbe(cpu_features) => {
-                extern "C" {
-                    fn GFp_gcm_init_avx(HTable: &mut HTable, h: &[u64; 2]);
-                }
-                unsafe {
-                    GFp_gcm_init_avx(h_table, &h);
-                }
-            }
-
-            #[cfg(any(
-                target_arch = "aarch64",
-                target_arch = "arm",
-                target_arch = "x86_64",
-                target_arch = "x86"
-            ))]
-            Implementation::CLMUL => {
-                extern "C" {
-                    fn GFp_gcm_init_clmul(Htable: &mut HTable, h: &[u64; 2]);
-                }
-                unsafe {
-                    GFp_gcm_init_clmul(h_table, &h);
-                }
-            }
-
-            #[cfg(any(target_arch = "aarch64", target_arch = "arm"))]
-            Implementation::NEON => {
-                extern "C" {
-                    fn GFp_gcm_init_neon(Htable: &mut HTable, h: &[u64; 2]);
-                }
-                unsafe {
-                    GFp_gcm_init_neon(h_table, &h);
-                }
-            }
-
-            #[cfg(not(target_arch = "aarch64"))]
             Implementation::Fallback => {
                 h_table.Htable[0] = gcm_nohw::init(h);
             }
@@ -118,57 +82,6 @@ impl Context {
         let h_table = &self.inner.Htable;
 
         match detect_implementation(self.cpu_features) {
-            #[cfg(target_arch = "x86_64")]
-            Implementation::CLMUL if has_avx_movbe(self.cpu_features) => {
-                extern "C" {
-                    fn GFp_gcm_ghash_avx(
-                        xi: &mut Xi,
-                        Htable: &HTable,
-                        inp: *const u8,
-                        len: crate::c::size_t,
-                    );
-                }
-                unsafe {
-                    GFp_gcm_ghash_avx(xi, h_table, input.as_ptr(), input.len());
-                }
-            }
-
-            #[cfg(any(
-                target_arch = "aarch64",
-                target_arch = "arm",
-                target_arch = "x86_64",
-                target_arch = "x86"
-            ))]
-            Implementation::CLMUL => {
-                extern "C" {
-                    fn GFp_gcm_ghash_clmul(
-                        xi: &mut Xi,
-                        Htable: &HTable,
-                        inp: *const u8,
-                        len: crate::c::size_t,
-                    );
-                }
-                unsafe {
-                    GFp_gcm_ghash_clmul(xi, h_table, input.as_ptr(), input.len());
-                }
-            }
-
-            #[cfg(any(target_arch = "aarch64", target_arch = "arm"))]
-            Implementation::NEON => {
-                extern "C" {
-                    fn GFp_gcm_ghash_neon(
-                        xi: &mut Xi,
-                        Htable: &HTable,
-                        inp: *const u8,
-                        len: crate::c::size_t,
-                    );
-                }
-                unsafe {
-                    GFp_gcm_ghash_neon(xi, h_table, input.as_ptr(), input.len());
-                }
-            }
-
-            #[cfg(not(target_arch = "aarch64"))]
             Implementation::Fallback => {
                 gcm_nohw::ghash(xi, h_table.Htable[0], input);
             }
@@ -185,32 +98,6 @@ impl Context {
         let h_table = &self.inner.Htable;
 
         match detect_implementation(self.cpu_features) {
-            #[cfg(any(
-                target_arch = "aarch64",
-                target_arch = "arm",
-                target_arch = "x86_64",
-                target_arch = "x86"
-            ))]
-            Implementation::CLMUL => {
-                extern "C" {
-                    fn GFp_gcm_gmult_clmul(xi: &mut Xi, Htable: &HTable);
-                }
-                unsafe {
-                    GFp_gcm_gmult_clmul(xi, h_table);
-                }
-            }
-
-            #[cfg(any(target_arch = "aarch64", target_arch = "arm"))]
-            Implementation::NEON => {
-                extern "C" {
-                    fn GFp_gcm_gmult_neon(xi: &mut Xi, Htable: &HTable);
-                }
-                unsafe {
-                    GFp_gcm_gmult_neon(xi, h_table);
-                }
-            }
-
-            #[cfg(not(target_arch = "aarch64"))]
             Implementation::Fallback => {
                 gcm_nohw::gmult(xi, h_table.Htable[0]);
             }
@@ -294,43 +181,7 @@ enum Implementation {
 
 #[inline]
 fn detect_implementation(cpu_features: cpu::Features) -> Implementation {
-    // `cpu_features` is only used for specific platforms.
-    #[cfg(not(any(
-        target_arch = "aarch64",
-        target_arch = "arm",
-        target_arch = "x86_64",
-        target_arch = "x86"
-    )))]
     let _cpu_features = cpu_features;
-
-    #[cfg(any(
-        target_arch = "aarch64",
-        target_arch = "arm",
-        target_arch = "x86_64",
-        target_arch = "x86"
-    ))]
-    {
-        if (cpu::intel::FXSR.available(cpu_features)
-            && cpu::intel::PCLMULQDQ.available(cpu_features))
-            || cpu::arm::PMULL.available(cpu_features)
-        {
-            return Implementation::CLMUL;
-        }
-    }
-
-    #[cfg(target_arch = "arm")]
-    {
-        if cpu::arm::NEON.available(cpu_features) {
-            return Implementation::NEON;
-        }
-    }
-
-    #[cfg(target_arch = "aarch64")]
-    {
-        return Implementation::NEON;
-    }
-
-    #[cfg(not(target_arch = "aarch64"))]
     Implementation::Fallback
 }
 
