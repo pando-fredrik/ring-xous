@@ -1208,29 +1208,6 @@ fn limbs_mont_mul(r: &mut [Limb], a: &[Limb], m: &[Limb], n0: &N0) {
     debug_assert_eq!(r.len(), m.len());
     debug_assert_eq!(a.len(), m.len());
 
-    #[cfg(any(
-        target_arch = "aarch64",
-        target_arch = "arm",
-        target_arch = "x86_64",
-        target_arch = "x86"
-    ))]
-    unsafe {
-        GFp_bn_mul_mont(
-            r.as_mut_ptr(),
-            r.as_ptr(),
-            a.as_ptr(),
-            m.as_ptr(),
-            n0,
-            r.len(),
-        )
-    }
-
-    #[cfg(not(any(
-        target_arch = "aarch64",
-        target_arch = "arm",
-        target_arch = "x86_64",
-        target_arch = "x86"
-    )))]
     {
         let mut tmp = [0; 2 * MODULUS_MAX_LIMBS];
         let tmp = &mut tmp[..(2 * a.len())];
