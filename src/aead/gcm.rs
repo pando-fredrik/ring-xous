@@ -15,7 +15,6 @@
 use super::{Aad, Block, BLOCK_LEN};
 use crate::cpu;
 
-#[cfg(not(target_arch = "aarch64"))]
 mod gcm_nohw;
 
 pub struct Key(HTable);
@@ -164,18 +163,6 @@ pub(super) struct ContextInner {
 }
 
 enum Implementation {
-    #[cfg(any(
-        target_arch = "aarch64",
-        target_arch = "arm",
-        target_arch = "x86_64",
-        target_arch = "x86"
-    ))]
-    CLMUL,
-
-    #[cfg(any(target_arch = "aarch64", target_arch = "arm"))]
-    NEON,
-
-    #[cfg(not(target_arch = "aarch64"))]
     Fallback,
 }
 
