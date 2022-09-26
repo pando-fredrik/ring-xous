@@ -17,6 +17,7 @@ use core::{
     num::Wrapping,
     ops::{Add, AddAssign, BitAnd, BitOr, BitXor, Not, Shr},
 };
+use crate::digest::sha1::block_data_order;
 
 pub(super) extern "C" fn GFp_sha256_block_data_order(
     state: &mut super::State,
